@@ -12,7 +12,7 @@ local global_module = require(game:GetService("ReplicatedStorage").SharedModules
 
 local hitboxes = {"Head", "HumanoidRootPart", "LowerTorso", "UpperTorso"} --// hitboxes
 
-local field_of_view = 150 --// field of view
+local field_of_view = 110 --// field of view
 
 --// our fov circle
 local circle = Drawing.new("Circle")
