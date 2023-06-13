@@ -1,3 +1,19 @@
+
+
+
+
+local players = game:GetService("Players") --// players
+local local_player = players.LocalPlayer --// localplayer
+local mouse = local_player:GetMouse() --// mouse
+local user_input_service = game:GetService("UserInputService") --// userinputservice
+local current_camera = game:GetService("Workspace").CurrentCamera --// currentcamera
+
+local global_module = require(game:GetService("ReplicatedStorage").SharedModules.Global) --// global module
+
+local hitboxes = {"Head", "HumanoidRootPart", "LowerTorso", "UpperTorso"} --// hitboxes
+
+--// our fov circle
+local circle = Drawing.new("Circle")
 circle.Visible = true
 circle.Radius = field_of_view
 circle.Filled = false
