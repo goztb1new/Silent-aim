@@ -1,88 +1,79 @@
---FE Simple AimLock Script | Released Nov 2021 | Working.
-local Area = game:GetService("Workspace")
-local RunService = game:GetService("RunService")
-local UIS = game:GetService("UserInputService")
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-local MyCharacter = LocalPlayer.Character
-local MyRoot = MyCharacter:FindFirstChild("HumanoidRootPart")
-local MyHumanoid = MyCharacter:FindFirstChild("Humanoid")
-local Mouse = LocalPlayer:GetMouse()
-local MyView = Area.CurrentCamera
-local MyTeamColor = LocalPlayer.TeamColor
-local HoldingM2 = false
-local Active = false
-local Lock = false
-local Epitaph = .187 ---Note: The Bigger The Number, The More Prediction.
-local HeadOffset = Vector3.new(0, .1, 0)
 
-_G.TeamCheck = false
-_G.AimPart = "HumanoidRootPart"
-_G.Sensitivity = 0
-_G.CircleSides = 64
-_G.CircleColor = Color3.fromRGB(255, 0, 130)
-_G.CircleTransparency = 0
-_G.CircleRadius = 200
-_G.CircleFilled = false
-_G.CircleVisible = true
-_G.CircleThickness = 1
 
-local FOVCircle = Drawing.new("Circle")
-FOVCircle.Position = Vector2.new(MyView.ViewportSize.X / 2, MyView.ViewportSize.Y / 2)
-FOVCircle.Radius = _G.CircleRadius
-FOVCircle.Filled = _G.CircleFilled
-FOVCircle.Color = _G.CircleColor
-FOVCircle.Visible = _G.CircleVisible
-FOVCircle.Transparency = _G.CircleTransparency
-FOVCircle.NumSides = _G.CircleSides
-FOVCircle.Thickness = _G.CircleThickness
 
-local function CursorLock()
-	UIS.MouseBehavior = Enum.MouseBehavior.LockCenter
+
+local players = game:GetService("Players") --// players
+local local_player = players.LocalPlayer --// localplayer
+local mouse = local_player:GetMouse() --// mouse
+local user_input_service = game:GetService("UserInputService") --// userinputservice
+local current_camera = game:GetService("Workspace").CurrentCamera --// currentcamera
+
+local global_module = require(game:GetService("ReplicatedStorage").SharedModules.Global) --// global module
+
+local hitboxes = {"Head", "HumanoidRootPart", "LowerTorso", "UpperTorso"} --// hitboxes
+
+local field_of_view = 110 --// field of view
+
+--// our fov circle
+local circle = Drawing.new("Circle")
+circle.Visible = true
+circle.Radius = field_of_view
+circle.Filled = false
+circle.Thickness = 1.2
+circle.Color = Color3.new(176, 42, 88)
+
+--// functions
+    --@Param hitboxes Array ["Head", "Torso"]
+    --// get closest entity to cursor
+    local function closest_to_cursor(hitboxes)
+        local target, part = nil, nil
+        local max_distance, max_part_distance = math.huge, math.huge
+        if not next(hitboxes) then
+            return
+        end
+        for i, v in next, players:GetPlayers() do
+            if v ~= local_player and v.Character and v.Character:FindFirstChild("HumanoidRootPart") then
+                local position, on_screen = current_camera:WorldToScreenPoint(v.Character.HumanoidRootPart.Position)
+                local distance = (Vector2.new(position.x, position.y) - Vector2.new(mouse.x, mouse.y)).Magnitude
+                if distance < max_distance then
+                    target, max_distance = v, distance
+                end
+            end
+        end
+        if target then
+            for i, v in next, target.Character:GetChildren() do
+                if table.find(hitboxes, v.Name) then
+                    local world_to_screen, on_screen = current_camera:WorldToScreenPoint(v.Position)
+                    local distance = (Vector2.new(world_to_screen.x, world_to_screen.y) - Vector2.new(mouse.x, mouse.y)).magnitude
+                    if distance < max_part_distance and on_screen and distance < field_of_view then
+                        part, max_part_distance = v, distance
+                    end
+                end
+            end
+        end
+        return {target, part}
+    end
+--// end of functions
+
+do --// events
+    do --// input changed
+
+        -- this is just to center the circle
+        user_input_service.InputChanged:connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseMovement and circle.Position ~= Vector2.new(current_camera.ViewportSize.x / 2, current_camera.ViewportSize.y / 2) then
+                circle.Position = Vector2.new(current_camera.ViewportSize.x / 2, current_camera.ViewportSize.y / 2)
+            end
+        end)
+    end
 end
-local function UnLockCursor()
-	HoldingM2 = false Active = false Lock = false 
-	UIS.MouseBehavior = Enum.MouseBehavior.Default
-end
-function FindNearestPlayer()
-	local dist = math.huge
-	local Target = nil
-	for _, v in pairs(Players:GetPlayers()) do
-		if v ~= LocalPlayer and v.Character:FindFirstChild("Humanoid") and v.Character:FindFirstChild("Humanoid").Health > 0 and v.Character:FindFirstChild("HumanoidRootPart") and v then
-			local TheirCharacter = v.Character
-			local CharacterRoot, Visible = MyView:WorldToViewportPoint(TheirCharacter[_G.AimPart].Position)
-			if Visible then
-				local RealMag = (Vector2.new(Mouse.X, Mouse.Y) - Vector2.new(CharacterRoot.X, CharacterRoot.Y)).Magnitude
-				if RealMag < dist and RealMag < FOVCircle.Radius then
-					dist = RealMag
-					Target = TheirCharacter
-				end
-			end
-		end
-	end
-	return Target
-end
 
-UIS.InputBegan:Connect(function(Input)
-	if Input.UserInputType == Enum.UserInputType.MouseButton2 then
-		HoldingM2 = true
-		Active = true
-		Lock = true
-		if Active then
-        	local The_Enemy = FindNearestPlayer()
-			while HoldingM2 do task.wait(.000001)
-				if Lock and The_Enemy ~= nil then
-					local Future = The_Enemy.HumanoidRootPart.CFrame + (The_Enemy.HumanoidRootPart.Velocity * Epitaph + HeadOffset)
-					MyView.CFrame = CFrame.lookAt(MyView.CFrame.Position, Future.Position)
-					CursorLock()
-				end
-			end
-		end
-	end
-end)
-UIS.InputEnded:Connect(function(Input)
-	if Input.UserInputType == Enum.UserInputType.MouseButton2 then
-		UnLockCursor()
-	end
-end)
-game.StarterGui:SetCore("SendNotification", {Title = "Working.", Text = "Success, Script Loaded.", Duration = 4,})
+do --// silent aim
+    local old = global_module.Utils.GetMouseHit
+    global_module.Utils.GetMouseHit = function(...)
+        if closest_to_cursor(hitboxes)[1] and closest_to_cursor(hitboxes)[2] then
+            return closest_to_cursor(hitboxes)[2].Position
+        else
+            return old(...)
+        end
+    end
+end
